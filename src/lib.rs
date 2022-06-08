@@ -147,7 +147,7 @@ impl<Digest>
         >,
     >
 where
-    Digest: digest::Digest + digest::FixedOutput,
+    Digest: digest::Digest,
 {
     /// Create `RecursiveDigest` by configuring `RecursiveDigestBuilder`
     pub fn new() -> RecursiveDigestBuilder<
@@ -184,18 +184,18 @@ where
     FFilter: Fn(&walkdir::DirEntry) -> bool,
     FAData:
         Fn(&walkdir::DirEntry, &mut AdditionalDataWriter<'_, Digest>) -> Result<(), DigestError>,
-    Digest: digest::Digest + digest::FixedOutput,
+    Digest: digest::Digest,
 {
     pub fn get_digest_of(&self, root_path: &Path) -> Result<Vec<u8>, DigestError> {
         let mut hashers = vec![];
 
         // pop the top hasher and output it to the one just above it
-        fn flush_up_one_level<D: digest::Digest + digest::FixedOutput>(hashers: &mut Vec<D>) {
+        fn flush_up_one_level<D: digest::Digest>(hashers: &mut Vec<D>) {
             let hasher = hashers.pop().expect("must not be empty yet");
             hashers
                 .last_mut()
                 .expect("must not happen")
-                .update(hasher.finalize_fixed().as_slice());
+                .update(hasher.finalize().as_slice());
         }
 
         let base_depth = root_path.components().count();
@@ -254,7 +254,7 @@ where
                         used: false,
                     },
                 )?;
-                hasher.update(name_hasher.finalize_fixed().as_slice());
+                hasher.update(name_hasher.finalize().as_slice());
             }
 
             // content
@@ -282,7 +282,7 @@ where
                 return Ok(hashers
                     .pop()
                     .expect("must not fail")
-                    .finalize_fixed()
+                    .finalize()
                     .to_vec());
             }
             flush_up_one_level(&mut hashers);
@@ -317,7 +317,7 @@ where
 }
 
 #[deprecated]
-pub fn get_recursive_digest_for_paths<Digest: digest::Digest + digest::FixedOutput, H>(
+pub fn get_recursive_digest_for_paths<Digest: digest::Digest, H>(
     root_path: &Path,
     paths: HashSet<PathBuf, H>,
 ) -> Result<Vec<u8>, DigestError>
@@ -339,7 +339,7 @@ where
 
 #[deprecated]
 pub fn get_recursive_digest_for_dir<
-    Digest: digest::Digest + digest::FixedOutput,
+    Digest: digest::Digest,
     H: std::hash::BuildHasher,
 >(
     root_path: &Path,
